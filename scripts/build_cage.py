@@ -3,12 +3,17 @@ from pathlib import Path
 import json, struct, math
 
 groups={}
-def box(x,y,z,dx,dy,dz,material=0,door=False):
+def box(x,y,z,dx,dy,dz,material=0,door=False,transform=None):
     p=[(x,y,z),(x+dx,y,z),(x+dx,y+dy,z),(x,y+dy,z),(x,y,z+dz),(x+dx,y,z+dz),(x+dx,y+dy,z+dz),(x,y+dy,z+dz)]
+    if transform: p=[transform(v) for v in p]
     # Counterclockwise triangles, viewed from outside each face.
     faces=[([0,3,2,1],(0,0,-1)),([1,2,6,5],(1,0,0)),([3,7,6,2],(0,1,0)),([0,1,5,4],(0,-1,0)),([0,4,7,3],(-1,0,0)),([4,5,6,7],(0,0,1))]
     positions,normals=groups.setdefault((door,material),([],[]))
     for ids,n in faces:
+        a,b,c=[p[i] for i in ids[:3]]
+        u=[b[i]-a[i] for i in range(3)];v=[c[i]-a[i] for i in range(3)]
+        n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]]
+        length=math.sqrt(sum(t*t for t in n));n=[t/length for t in n]
         for j in [0,1,2,0,2,3]:
             positions.extend(v/100 for v in p[ids[j]])
             normals.extend(n)
@@ -17,28 +22,39 @@ def mesh(x0,x1,y0,y1,z,door=False):
     for x in range(round(x0*10),round(x1*10)+1,50): box(x/10-.10,y0,z-.1,.2,y1-y0,.2,1,door)
     for y in range(round(y0*10),round(y1*10)+1,50): box(x0,y/10-.10,z-.1,x1-x0,.2,.2,1,door)
 
+# Front is +Z: 110 cm high. Rear is -Z: 120 cm high.
+def roof_y(z): return 115-z/11
+slope=lambda p:(p[0],p[1]-(p[2]+55)/11,p[2])
 mesh(-72,72,3,117,-53.5)
 for x in [-73.5,73.5]:
-    for z in range(-52,53,5): box(x-.1,3,z-.1,.2,114,.2,1)
-    for y in range(3,118,5): box(x-.1,y-.1,-52,.2,.2,104,1)
-mesh(-72,-43,3,117,53.5);mesh(43,72,3,117,53.5)
+    for z in range(-52,53,5): box(x-.1,3,z-.1,.2,roof_y(z)-6.5,.2,1)
+    for y in range(3,117,5):
+        zmax=min(52,11*(111.5-y))
+        if zmax>-52:box(x-.1,y-.1,-52,.2,.2,zmax+52,1)
+mesh(-72,-43,3,107,53.5);mesh(43,72,3,107,53.5)
 for x in [-75,72]:
-    for z in [-55,52]: box(x,0,z,3,119.5,3)
-for y in [0,116.5]:
-    for z in [-55,52]: box(-72,y,z,144,3,3)
-    for x in [-75,72]: box(x,y,-52,3,3,104)
-for x in [-43,40]: box(x,3,52,3,114,3)
-# Door geometry uses a local origin at the left hinge.
-mesh(3,76,6.5,113.5,0,True)
-for x in [0,76]:box(x,3.5,-3,3,113,3,0,True)
-for y in [3.5,113.5]:box(3,y,-3,73,3,3,0,True)
-box(70,56,0,2,10,2,2,True)
-for y in [22,94]:box(-41,y,54,3,7,2)
-# Grass tiles: no remote textures; roof top is exactly 120 cm.
+    for z in [-55,52]:
+        box(x,0,z,3,120,3,transform=lambda p:(p[0],(roof_y(p[2])-.5) if p[1]>0 else 0,p[2]))
+for z in [-55,52]:
+    box(-72,0,z,144,3,3)
+    box(-72,116.5,z,144,3,3,transform=slope)
+for x in [-75,72]:
+    box(x,0,-52,3,3,104)
+    box(x,116.5,-52,3,3,104,transform=slope)
+# One central roof support and a thin carrier under the grass.
+box(-72,116.5,-1.5,144,3,3,transform=slope)
+box(-75,119,-55,150,.3,110,2,transform=slope)
+for x in [-43,40]: box(x,3,52,3,104,3)
+mesh(3,76,6.5,103.5,0,True)
+for x in [0,76]:box(x,3.5,-3,3,103,3,0,True)
+for y in [3.5,103.5]:box(3,y,-3,73,3,3,0,True)
+box(70,51,0,2,10,2,2,True)
+for y in [20,84]:box(-41,y,54,3,7,2)
+# Continuous sloping tiles; no stair steps or remote texture.
 for x in range(-75,75,5):
     for z in range(-55,55,5):
         shade=3+(abs(x*17+z*31)%7)
-        box(x,119.5,z,5,.5,5,shade)
+        box(x,119.5,z,5,.5,5,shade,transform=slope)
 
 materials=[{'name':'White powder coat','pbrMetallicRoughness':{'baseColorFactor':[.9,.93,.88,1],'metallicFactor':.12,'roughnessFactor':.62}},
 {'name':'White welded mesh','pbrMetallicRoughness':{'baseColorFactor':[.82,.88,.81,1],'metallicFactor':.15,'roughnessFactor':.65}},

@@ -11,3 +11,5 @@ Validate models in the actual browser. Check loading, controls, animation in bot
 Do not store credentials, account configuration, personal data or unapproved reference assets in this public repository. Do not add fake gallery entries. Keep README accurate about hosting and the fact that chat-to-site updates require an actual repository change and deployment.
 
 Bump the query version of edited JavaScript/CSS/catalogue assets in index.html on publication so returning visitors receive the updated files.
+
+Latest approved cage geometry: rear 120 cm, front 110 cm; roof slopes forward by 10 cm across 110 cm depth. Door clear opening 80 x 104 cm, leaf 79 x 103 cm. Keep materials-cage.js, the GLB generator and the HTML fallback consistent. Material stock lengths supplied by the user: steel bars 6 m, mesh sheets 2 x 1 m. Material quantities and cutting assumptions appear below the viewer; preserve them on future updates.
