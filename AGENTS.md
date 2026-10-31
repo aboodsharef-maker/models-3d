@@ -1,19 +1,11 @@
-# Maintaining this gallery
+# TALA Study Planner
 
-Preserve this as the user's permanent Arabic, RTL 3D gallery named "مجسّمات 3D". Keep a static site with local dependencies and no mandatory backend. Do not rebuild the entire gallery for every new model.
+This repository has been intentionally converted from the former models-3d gallery into TALA Study Planner. The current user instruction supersedes all previous gallery instructions. Keep the repository name and public GitHub Pages URL unchanged.
 
-When the user requests a new object here, create the model, put it under models/, and register it in models.js with a stable unique id, Arabic name, dimensions in centimetres, description and specifications. Use self-contained GLB (glTF 2.0, metres) for portable models; provide an HTML fallback when useful. Include named animation clips for interactive moving parts. Do not claim a generated image is an interactive 3D model.
+Stack: React, TypeScript and Vite. Base path: /models-3d/. Public UI is Arabic RTL. The royal purple, transparent cards, subtle gold, crown/T logo and independent decorative SVG assets form the visual identity. Keep the interface responsive, accessible and usable on iPhone. Respect reduced-motion preferences.
 
-For the cage, preserve the approved dimensions, opening, materials and door hinge. The original code-rendered fallback is models/cage.html. scripts/build_cage.py regenerates its GLB equivalent.
+All personal data stays in the browser's IndexedDB database tala-study-planner, schema version 1. Never add cloud sync, analytics, accounts or third-party data transmission without a user request. Never commit notebook data, exported backups or testing data. Keep versioned JSON backups validated before import; preserve rich formatting, parent/subject referential integrity and cycle checks. Do not replace storage errors with an empty notebook.
 
-Validate models in the actual browser. Check loading, controls, animation in both directions, and a mobile breakpoint. Keep errors visible and preserve fallback behavior. Publish through the existing repository and hosting workflow when requested, and verify the public URL before claiming success. Never create a new repository or hosting project for a routine model addition.
+Source is under src/; public assets and manifest under public/. The obsolete gallery files remaining on the local disk are ignored and excluded from the Git repository and deployment. The complete former gallery is retained at the pushed annotated tag backup/models-3d-before-tala-2026-10-31, commit 4f7ed3b4059b127fed5d5ce51809a5d8e3830662. Do not delete the tag.
 
-Do not store credentials, account configuration, personal data or unapproved reference assets in this public repository. Do not add fake gallery entries. Keep README accurate about hosting and the fact that chat-to-site updates require an actual repository change and deployment.
-
-Bump the query version of edited JavaScript/CSS/catalogue assets in index.html on publication so returning visitors receive the updated files.
-
-Latest approved cage geometry: rear 120 cm, front 110 cm; roof slopes forward by 10 cm across 110 cm depth. Door clear opening 80 x 104 cm, leaf 79 x 103 cm. Keep materials-cage.js, the GLB generator and the HTML fallback consistent. Material stock lengths supplied by the user: steel bars 6 m, mesh sheets 2 x 1 m. Material quantities and cutting assumptions appear below the viewer; preserve them on future updates.
-
-Hardware highlighting approved: brass-coloured metallic hinges, blue metallic sliding bolt, plate and keeper. Preserve the distinct PBR materials and matching fallback colours. These are visual finishes, not a requirement to buy solid brass hinges.
-
-Latest user instruction overrides the old fallback guidance: keep the primary GLB viewer shown in the reference screenshot as the only viewing experience. Do not switch to the canvas fallback automatically or expose a second-view button. A same-model selection must not reload it. Keep measurements and materials overlaid on the model using assets/annotations.js, with materials tables below.
+Run npm test and npm run build before publication. Use actual browser checks for CRUD, dates, formatted notes surviving reload, import/export and mobile layout. The existing .github/workflows/pages.yml installs from package-lock.json, runs tests/builds, and deploys dist/ on main. Verify successful deployment and the public URL before claiming publication.

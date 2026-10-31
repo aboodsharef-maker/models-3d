@@ -1,0 +1,55 @@
+import type { Doc, Entity, PlannerData, Subject, Section, Task, Backup } from './types';
+import { colors, icons, emptyDoc } from './types';
+export const now = () => new Date().toISOString();
+export const uid = () => crypto.randomUUID();
+export const entity = (order = Date.now()): Entity => ({ id: uid(), createdAt: now(), updatedAt: now(), order });
+export function today() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+export function shiftDate(date: string, n: number) { const d = new Date(date+'T12:00:00'); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+export function daysUntil(date: string, from = today()) { return Math.round((Date.parse(date+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000); }
+export const formatDate = (date: string, options?: Intl.DateTimeFormatOptions) => { const d=new Date(date+'T12:00:00'); return isNaN(d.getTime())?'تاريخ غير محدد':new Intl.DateTimeFormat('ar-JO', options || { day:'numeric', month:'long' }).format(d); };
+export const sorted = <T extends Entity>(items: T[]) => [...items].sort((a,b)=>a.order-b.order || a.id.localeCompare(b.id));
+export const textOf = (d: Doc | undefined): string => d ? [d.text || '', ...(d.content || []).map(textOf)].join(' ') : '';
+export function initialData(): PlannerData { const stamp=now();return { schemaVersion:1, deviceId:uid(), createdAt:stamp, updatedAt:stamp, revision:0, subjects:['اللغة الإنجليزية','الرياضيات','العلوم','اللغة العربية','التربية الإسلامية','التاريخ'].map((name,i)=>({...entity(i),name,color:colors[i],icon:icons[i]})), sections:[], tasks:[], notes:[], exams:[], settings:{name:'تالا',theme:'royal',accent:'#d8b77b',font:'Tajawal',fontSize:16,animations:true} }; }
+export function descendants(sections: Section[], id: string): Set<string> { const found=new Set([id]);let changed=true;while(changed){changed=false;for(const s of sections)if(s.parentId&&found.has(s.parentId)&&!found.has(s.id)){found.add(s.id);changed=true;}}return found; }
+export function tasksIn(data: PlannerData, subjectId: string, sectionId?: string): Task[] { const ids=sectionId?descendants(data.sections,sectionId):null;return data.tasks.filter(t=>t.subjectId===subjectId&&(!ids||!!t.sectionId&&ids.has(t.sectionId))); }
+export function progress(tasks: Task[]) { const done=tasks.filter(t=>t.done).length;return {total:tasks.length,done,percent:tasks.length?Math.round(done/tasks.length*100):0}; }
+export function deleteSubject(data: PlannerData, id: string): PlannerData { return {...data,subjects:data.subjects.filter(s=>s.id!==id),sections:data.sections.filter(s=>s.subjectId!==id),tasks:data.tasks.filter(t=>t.subjectId!==id),notes:data.notes.map(n=>n.subjectId===id?{...n,subjectId:null,updatedAt:now()}:n),exams:data.exams.map(e=>e.subjectId===id?{...e,subjectId:null,updatedAt:now()}:e)}; }
+export function deleteSection(data: PlannerData, id: string): PlannerData { const ids=descendants(data.sections,id);return {...data,sections:data.sections.filter(s=>!ids.has(s.id)),tasks:data.tasks.filter(t=>!t.sectionId||!ids.has(t.sectionId))}; }
+export function reorder<T extends Entity>(all:T[], id:string, delta:number, group:(e:T)=>boolean=()=>true):T[] { const list=sorted(all.filter(group)),i=list.findIndex(e=>e.id===id),j=i+delta;if(i<0||j<0||j>=list.length)return all;[list[i],list[j]]=[list[j],list[i]];const positions=new Map(list.map((e,i)=>[e.id,i]));return all.map(e=>positions.has(e.id)?{...e,order:positions.get(e.id)!,updatedAt:now()}:e); }
+export function sectionPath(data: PlannerData, id: string): string { const path:string[]=[],seen=new Set();let s=data.sections.find(s=>s.id===id);while(s&&!seen.has(s.id)){seen.add(s.id);path.unshift(s.name);s=data.sections.find(p=>p.id===s!.parentId);}return path.join(' / '); }
+export function canMoveSection(data: PlannerData, id:string, parentId:string|null) { if(!parentId)return true;const a=data.sections.find(s=>s.id===id),b=data.sections.find(s=>s.id===parentId);return !!a&&!!b&&a.subjectId===b.subjectId&&!descendants(data.sections,id).has(parentId); }
+export function makeBackup(data: PlannerData): Backup { return {app:'TALA Study Planner',schemaVersion:1,exportedAt:now(),data}; }
+const record=(x:unknown):Record<string,unknown>=>{if(!x||typeof x!=='object'||Array.isArray(x))throw new Error('بنية النسخة الاحتياطية غير صالحة.');return x as Record<string,unknown>;};
+function str(x:unknown,max=300):string { if(typeof x!=='string'||x.length>max)throw new Error('نص أو طول حقل غير صالح.');return x; }
+const nullable=(x:unknown)=>x===null?null:str(x,100);
+const num=(x:unknown)=>{if(typeof x!=='number'||!Number.isFinite(x))throw new Error('قيمة رقمية غير صالحة.');return x;};
+const bool=(x:unknown)=>{if(typeof x!=='boolean')throw new Error('قيمة منطقية غير صالحة.');return x;};
+export function validDate(x:unknown):x is string { if(typeof x!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(x))return false;const d=new Date(x+'T12:00:00Z');return !isNaN(d.getTime())&&d.toISOString().slice(0,10)===x; }
+const date=(x:unknown)=>{if(!validDate(x))throw new Error('تاريخ غير صالح.');return x;};
+const stamp=(x:unknown)=>{const s=str(x,50);if(isNaN(Date.parse(s)))throw new Error('وقت غير صالح.');return s;};
+const hex=(x:unknown)=>{const s=str(x,9);if(!/^#[0-9a-f]{6}$/i.test(s))throw new Error('لون غير صالح.');return s;};
+const choice=<T extends string>(x:unknown,allowed:readonly T[]):T=>{if(!allowed.includes(x as T))throw new Error('خيار غير مدعوم.');return x as T;};
+export function validateDoc(input:unknown):Doc { let count=0;
+ function node(input:unknown,depth=0):Doc { if(depth>40||++count>15000)throw new Error('الملاحظة أكبر من الحد المسموح.');const n=record(input);const type=choice(n.type,['doc','paragraph','text','heading','bulletList','orderedList','listItem','taskList','taskItem','blockquote','hardBreak','horizontalRule','codeBlock'] as const);const out:Doc={type};if(n.text!==undefined)out.text=str(n.text,200000);if(n.content!==undefined){if(!Array.isArray(n.content))throw new Error('محتوى غير صالح.');out.content=n.content.map(c=>node(c,depth+1));}
+ if(n.attrs){const a=record(n.attrs),attrs:Record<string,unknown>={};if(a.dir!==undefined&&a.dir!==null)attrs.dir=choice(a.dir,['rtl','ltr','auto']);if(a.textAlign!==undefined&&a.textAlign!==null)attrs.textAlign=choice(a.textAlign,['left','right','center','justify','start']);if(a.level!==undefined)attrs.level=Math.max(1,Math.min(6,num(a.level)));if(a.start!==undefined)attrs.start=num(a.start);if(a.checked!==undefined)attrs.checked=bool(a.checked);if(a.language!==undefined&&a.language!==null)attrs.language=str(a.language,30);out.attrs=attrs;}
+ if(n.marks!==undefined){if(!Array.isArray(n.marks)||n.marks.length>12)throw new Error('تنسيقات غير صالحة.');out.marks=n.marks.map(m=>{const r=record(m),type=choice(r.type,['bold','italic','underline','strike','code','textStyle','highlight'] as const);const out:{type:string;attrs?:Record<string,unknown>}={type};if(r.attrs){const a=record(r.attrs),attrs:Record<string,unknown>={};for(const key of ['color','backgroundColor'])if(a[key]!==undefined&&a[key]!==null){const s=str(a[key],40);if(!/^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|transparent)$/i.test(s))throw new Error('تنسيق لون غير آمن.');attrs[key]=s;}if(a.fontFamily!==undefined&&a.fontFamily!==null)attrs.fontFamily=choice(a.fontFamily,['Tajawal','Cairo','Amiri','Arial','Georgia']);if(a.fontSize!==undefined&&a.fontSize!==null){const s=str(a.fontSize,10);if(!/^(12|14|16|18|20|24|28|32|40)px$/.test(s))throw new Error('حجم خط غير مدعوم.');attrs.fontSize=s;}out.attrs=attrs;}return out;});}return out;
+ }const doc=node(input);if(doc.type!=='doc')throw new Error('جذر الملاحظة غير صالح.');return doc;
+}
+export function validateData(input:unknown):PlannerData { const d=record(input);if(d.schemaVersion!==1)throw new Error('إصدار البيانات غير مدعوم.');
+const base=(x:unknown):Entity=>{const r=record(x);return {id:str(r.id,100),createdAt:stamp(r.createdAt),updatedAt:stamp(r.updatedAt),order:num(r.order)};};
+function arr<T>(key:string,limit:number,fn:(r:Record<string,unknown>)=>T):T[]{const a=d[key];if(!Array.isArray(a)||a.length>limit)throw new Error('عدد سجلات غير صالح: '+key);return a.map(x=>fn(record(x)));}
+const subjects=arr('subjects',200,r=>({...base(r),name:str(r.name),color:hex(r.color),icon:choice(r.icon,icons)})) as Subject[];
+const sections=arr('sections',5000,r=>({...base(r),subjectId:str(r.subjectId,100),parentId:nullable(r.parentId),name:str(r.name)}));
+const tasks=arr('tasks',20000,r=>({...base(r),subjectId:nullable(r.subjectId),sectionId:nullable(r.sectionId),title:str(r.title,500),body:validateDoc(r.body),date:r.date===null?null:date(r.date),done:bool(r.done),completedAt:r.completedAt===null?null:stamp(r.completedAt),priority:choice(r.priority,['normal','high','low'] as const)}));
+const notes=arr('notes',5000,r=>({...base(r),subjectId:nullable(r.subjectId),title:str(r.title),body:validateDoc(r.body),pinned:bool(r.pinned)}));
+const exams=arr('exams',2000,r=>({...base(r),subjectId:nullable(r.subjectId),title:str(r.title),date:date(r.date),time:str(r.time,5),notes:str(r.notes,5000)}));
+const s=record(d.settings);const settings={name:str(s.name,60),theme:choice(s.theme,['royal','plum','midnight'] as const),accent:hex(s.accent),font:choice(s.font,['Tajawal','Cairo','Amiri'] as const),fontSize:num(s.fontSize),animations:bool(s.animations)};if(settings.fontSize<14||settings.fontSize>22)throw new Error('حجم الواجهة غير صالح.');
+const ids=new Set<string>();for(const e of [...subjects,...sections,...tasks,...notes,...exams]){if(!e.id||ids.has(e.id))throw new Error('معرّف مكرر أو فارغ.');ids.add(e.id);}
+const subjectIds=new Set(subjects.map(s=>s.id)),sectionMap=new Map(sections.map(s=>[s.id,s]));
+for(const s of sections){if(!subjectIds.has(s.subjectId))throw new Error('قسم مرتبط بمادة غير موجودة.');let p:typeof s|undefined=s;const seen=new Set();while(p){if(seen.has(p.id)||seen.size>20)throw new Error('تسلسل أقسام دائري أو عميق جدًا.');seen.add(p.id);if(p.parentId){const parent=sectionMap.get(p.parentId);if(!parent||parent.subjectId!==s.subjectId)throw new Error('القسم الأب غير صالح.');p=parent;}else p=undefined;}}
+for(const t of [...tasks,...notes,...exams])if(t.subjectId&&!subjectIds.has(t.subjectId))throw new Error('ارتباط بمادة غير موجودة.');
+for(const t of tasks)if(t.sectionId&&(!sectionMap.has(t.sectionId)||sectionMap.get(t.sectionId)?.subjectId!==t.subjectId))throw new Error('ارتباط المهمة بالقسم غير صالح.');
+return {schemaVersion:1,deviceId:str(d.deviceId,100),createdAt:stamp(d.createdAt),updatedAt:stamp(d.updatedAt),revision:num(d.revision),subjects,sections,tasks,notes,exams,settings};
+}
+export function parseBackup(text:string):PlannerData { if(text.length>15_000_000)throw new Error('النسخة أكبر من 15 ميغابايت.');const b=record(JSON.parse(text));if(b.app!=='TALA Study Planner'||b.schemaVersion!==1)throw new Error('اختاري نسخة JSON مصدّرة من TALA Study Planner.');return validateData(b.data); }
+export { emptyDoc };

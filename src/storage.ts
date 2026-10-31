@@ -1,0 +1,14 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { PlannerData } from './types';
+import { initialData, now, validateData } from './data';
+const DB='tala-study-planner',STORE='planner';
+export async function openDB():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const req=indexedDB.open(DB,1);req.onupgradeneeded=()=>req.result.createObjectStore(STORE);req.onsuccess=()=>{req.result.onversionchange=()=>req.result.close();resolve(req.result);};req.onerror=()=>reject(req.error);req.onblocked=()=>reject(new Error('أغلقي التبويبات الأخرى ثم أعيدي المحاولة.'));});}
+export async function readData():Promise<PlannerData|null>{const db=await openDB();try{return await new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readonly'),req=tx.objectStore(STORE).get('personal');req.onsuccess=()=>{try{resolve(req.result?validateData(req.result):null);}catch(e){reject(e);}};req.onerror=()=>reject(req.error);});}finally{db.close();}}
+export async function writeData(data:PlannerData):Promise<void>{const db=await openDB();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(data,'personal');tx.oncomplete=()=>resolve();tx.onabort=tx.onerror=()=>reject(tx.error||new Error('تعذّر حفظ البيانات.'));});}finally{db.close();}}
+export function usePlanner(){const [data,setData]=useState<PlannerData|null>(null),[error,setError]=useState(''),[saveStatus,setSaveStatus]=useState<'loading'|'saving'|'saved'|'error'>('loading');const queue=useRef(Promise.resolve()),ready=useRef(false),latest=useRef<PlannerData|null>(null);
+useEffect(()=>{let alive=true;readData().then(value=>{if(!alive)return;const d=value||initialData();ready.current=true;latest.current=d;setData(d);setSaveStatus(value?'saved':'saving');}).catch(e=>{if(alive){setError(String(e instanceof Error?e.message:e));setSaveStatus('error');}});return()=>{alive=false;};},[]);
+useEffect(()=>{if(!data||!ready.current)return;latest.current=data;setSaveStatus('saving');queue.current=queue.current.catch(()=>{}).then(()=>writeData(data)).then(()=>{if(latest.current===data){setSaveStatus('saved');setError('');}}).catch(e=>{setSaveStatus('error');setError('لم يتم الحفظ على الجهاز: '+String(e instanceof Error?e.message:e));});},[data]);
+useEffect(()=>{const before=(e:BeforeUnloadEvent)=>{if(saveStatus==='saving'||saveStatus==='error'){e.preventDefault();}};window.addEventListener('beforeunload',before);return()=>window.removeEventListener('beforeunload',before);},[saveStatus]);
+const update=useCallback((fn:(d:PlannerData)=>PlannerData)=>setData(prev=>{if(!prev)return prev;const next=fn(prev);return {...next,updatedAt:now(),revision:prev.revision+1};}),[]);
+const retry=()=>{if(data){setData({...data});}else location.reload();};
+return {data,update,saveStatus,error,retry};}

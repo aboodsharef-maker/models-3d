@@ -1,2 +1,0 @@
-@google/model-viewer 4.4.0
-Source: https://registry.npmjs.org/@google/model-viewer/-/model-viewer-4.4.0.tgz
