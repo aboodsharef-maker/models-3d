@@ -9,3 +9,5 @@ For the cage, preserve the approved dimensions, opening, materials and door hing
 Validate models in the actual browser. Check loading, controls, animation in both directions, and a mobile breakpoint. Keep errors visible and preserve fallback behavior. Publish through the existing repository and hosting workflow when requested, and verify the public URL before claiming success. Never create a new repository or hosting project for a routine model addition.
 
 Do not store credentials, account configuration, personal data or unapproved reference assets in this public repository. Do not add fake gallery entries. Keep README accurate about hosting and the fact that chat-to-site updates require an actual repository change and deployment.
+
+Bump the query version of edited JavaScript/CSS/catalogue assets in index.html on publication so returning visitors receive the updated files.
