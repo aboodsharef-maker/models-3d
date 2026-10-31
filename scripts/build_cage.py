@@ -48,8 +48,16 @@ for x in [-43,40]: box(x,3,52,3,104,3)
 mesh(3,76,6.5,103.5,0,True)
 for x in [0,76]:box(x,3.5,-3,3,103,3,0,True)
 for y in [3.5,103.5]:box(3,y,-3,73,3,3,0,True)
-box(70,51,0,2,10,2,2,True)
-for y in [20,84]:box(-41,y,54,3,7,2)
+# Blue sliding bolt: mounting plate, bolt, raised thumb grip and fixed keeper.
+box(70,50,0,8,5,.8,11,True)
+box(72,52,.8,9,1.3,1.3,11,True)
+box(75,53.3,.8,1.5,2,1.5,11,True)
+box(40,51.5,55,3,3,1.5,11)
+# Brass hinges: fixed leaf, moving leaf and hinge knuckle.
+for y in [20,84]:
+    box(-43,y,54.6,3,7,.8,10)
+    box(0,y,0,3,7,.8,10,True)
+    box(-40.4,y,55.4,1.8,7,1.8,10)
 # Continuous sloping tiles; no stair steps or remote texture.
 for x in range(-75,75,5):
     for z in range(-55,55,5):
@@ -60,6 +68,8 @@ materials=[{'name':'White powder coat','pbrMetallicRoughness':{'baseColorFactor'
 {'name':'White welded mesh','pbrMetallicRoughness':{'baseColorFactor':[.82,.88,.81,1],'metallicFactor':.15,'roughnessFactor':.65}},
 {'name':'Latch','pbrMetallicRoughness':{'baseColorFactor':[.35,.42,.34,1],'metallicFactor':.65,'roughnessFactor':.4}}]
 for i in range(7):materials.append({'name':'Artificial grass '+str(i),'pbrMetallicRoughness':{'baseColorFactor':[.16+i*.009,.28+i*.012,.055+i*.005,1],'metallicFactor':0,'roughnessFactor':1}})
+materials.extend([{'name':'Brass hinges','pbrMetallicRoughness':{'baseColorFactor':[.78,.39,.075,1],'metallicFactor':.78,'roughnessFactor':.28}},{'name':'Blue metal sliding bolt','pbrMetallicRoughness':{'baseColorFactor':[.025,.24,.8,1],'metallicFactor':.6,'roughnessFactor':.28}}])
+
 doc={'asset':{'version':'2.0','generator':'Models 3D cage generator'},'scene':0,'scenes':[{'nodes':[0,1]}],'nodes':[{'name':'Cage frame','mesh':0},{'name':'Door hinge','mesh':1,'translation':[-.395,0,.55]}],'meshes':[{'primitives':[]},{'primitives':[]}],'materials':materials,'accessors':[],'bufferViews':[],'buffers':[]}
 binary=bytearray()
 def accessor(values,kind,components,limits=False):

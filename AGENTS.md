@@ -13,3 +13,5 @@ Do not store credentials, account configuration, personal data or unapproved ref
 Bump the query version of edited JavaScript/CSS/catalogue assets in index.html on publication so returning visitors receive the updated files.
 
 Latest approved cage geometry: rear 120 cm, front 110 cm; roof slopes forward by 10 cm across 110 cm depth. Door clear opening 80 x 104 cm, leaf 79 x 103 cm. Keep materials-cage.js, the GLB generator and the HTML fallback consistent. Material stock lengths supplied by the user: steel bars 6 m, mesh sheets 2 x 1 m. Material quantities and cutting assumptions appear below the viewer; preserve them on future updates.
+
+Hardware highlighting approved: brass-coloured metallic hinges, blue metallic sliding bolt, plate and keeper. Preserve the distinct PBR materials and matching fallback colours. These are visual finishes, not a requirement to buy solid brass hinges.
