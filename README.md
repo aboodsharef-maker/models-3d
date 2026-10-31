@@ -24,6 +24,10 @@
 
 ## الاستضافة
 
+الموقع: https://aboodsharef-maker.github.io/models-3d/
+
+المستودع: https://github.com/aboodsharef-maker/models-3d
+
 أُعد GitHub Pages كخيار أول لأن حساب GitHub المرتبط متاح. فعّل Pages بمصدر GitHub Actions. يُعاد النشر عند كل تحديث main. هذا لا يعني أن الموقع قد نُشر قبل نجاح مهمة Actions وفتح الرابط العام.
 
 للنقل إلى أي استضافة ثابتة أخرى: ارفع ملفات المشروع كما هي؛ لا يوجد build command. لم تُضبط استضافة خارج GitHub لأن المستخدم لم يحدد اسم المزوّد الآخر بعد.
