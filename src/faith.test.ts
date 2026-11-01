@@ -1,0 +1,18 @@
+import { describe,it,expect } from 'vitest';
+import { initialData,entity,emptyDoc,makeBackup,parseBackup,validateData } from './data';
+import { emptyFaith,togglePrayer,readingProgress,dailyGoal,deletePlan } from './faith';
+import type { Khatma,Reading } from './types';
+const plan:Khatma={...entity(),title:'ختمتي',totalPages:604,startDate:'2026-11-01',targetDate:'2026-11-30'};
+const reading=(fromPage:number,toPage:number,date='2026-11-01'):Reading=>({...entity(),planId:plan.id,date,fromPage,toPage,note:''});
+describe('prayer and Quran records',()=>{
+it('toggles a prayer without duplicating the date or touching other days',()=>{let f=togglePrayer(emptyFaith(),'2026-11-01','fajr');f=togglePrayer(f,'2026-11-01','dhuhr');f=togglePrayer(f,'2026-11-02','fajr');f=togglePrayer(f,'2026-11-01','fajr');expect(f.prayers).toHaveLength(2);expect(f.prayers.find(p=>p.date==='2026-11-01')?.completed).toEqual(['dhuhr']);expect(f.prayers.find(p=>p.date==='2026-11-02')?.completed).toEqual(['fajr']);});
+it('counts overlapping and repeated pages once',()=>{const p=readingProgress(plan,[reading(1,20),reading(10,30),reading(1,20)]);expect(p.read).toBe(30);expect(p.nextPage).toBe(31);expect(p.remaining).toBe(574);});
+it('finds the first unread gap, not merely the last logged page',()=>{expect(readingProgress(plan,[reading(5,10)]).nextPage).toBe(1);expect(readingProgress(plan,[reading(1,4),reading(5,10),reading(12,20)]).nextPage).toBe(11);expect(readingProgress(plan,[reading(1,604)]).percent).toBe(100);expect(readingProgress(plan,[reading(1,604)]).nextPage).toBeNull();});
+it('keeps the daily target stable while today is being logged',()=>{expect(dailyGoal(plan,[],'2026-11-01')).toBe(21);expect(dailyGoal(plan,[reading(1,21)],'2026-11-01')).toBe(21);expect(dailyGoal(plan,[reading(1,21)],'2026-11-02')).toBe(21);expect(dailyGoal(plan,[],'2026-10-31')).toBe(0);});
+it('deletes only a selected plan and its logs',()=>{const second={...plan,id:'second'},f={...emptyFaith(),plans:[plan,second],readings:[reading(1,10)],activePlanId:plan.id};const n=deletePlan(f,plan.id);expect(n.plans.map(p=>p.id)).toEqual(['second']);expect(n.readings).toEqual([]);expect(n.activePlanId).toBe('second');});
+});
+describe('safe additive migration and backup',()=>{
+it('upgrades an original v1 notebook without losing its notes or subject ids',()=>{const original=initialData();original.notes=[{...entity(),subjectId:original.subjects[0].id,title:'ملاحظتي الأصلية',body:emptyDoc,pinned:false}];const old=JSON.parse(JSON.stringify(original));old.schemaVersion=1;delete old.faith;const migrated=parseBackup(JSON.stringify({app:'TALA Study Planner',schemaVersion:1,data:old}));expect(migrated.schemaVersion).toBe(2);expect(migrated.notes).toEqual(original.notes);expect(migrated.subjects).toEqual(original.subjects);expect(migrated.faith).toEqual(emptyFaith());});
+it('round trips prayers and reading with study data',()=>{const d=initialData();d.faith={...togglePrayer(emptyFaith(),'2026-11-01','fajr'),plans:[plan],readings:[reading(1,21)],activePlanId:plan.id};expect(parseBackup(JSON.stringify(makeBackup(d)))).toEqual(d);});
+it('rejects out of range pages, unknown prayer keys and orphaned reading',()=>{const d=initialData();d.faith={...emptyFaith(),plans:[plan],readings:[reading(10,605)],activePlanId:plan.id};expect(()=>validateData(d)).toThrow();d.faith.readings=[{...reading(1,5),planId:'missing'}];expect(()=>validateData(d)).toThrow();d.faith.readings=[];const raw=JSON.parse(JSON.stringify(d));raw.faith.prayers=[{...entity(),date:'2026-11-01',completed:['invalid']}];expect(()=>validateData(raw)).toThrow();});
+});

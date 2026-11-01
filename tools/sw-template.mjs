@@ -1,0 +1,10 @@
+export function createServiceWorker(revision,assets,base='/models-3d/'){return `/* TALA offline app shell. Personal IndexedDB data is never cached or removed here. */
+const PREFIX='tala-shell-',CACHE=PREFIX+${JSON.stringify(revision)},BASE=${JSON.stringify(base)},FILES=${JSON.stringify(assets)};
+self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE);await Promise.all(FILES.map(async path=>{const url=new URL(path,self.location.origin);url.searchParams.set('tala-revision',CACHE);const response=await fetch(url.href,{cache:'reload'});if(!response.ok)throw new Error('Precache failed: '+path);await cache.put(path,response);}));})()));
+self.addEventListener('message',event=>{if(event.data&&event.data.type==='SKIP_WAITING')self.skipWaiting();});
+self.addEventListener('activate',event=>event.waitUntil((async()=>{const names=(await caches.keys()).filter(n=>n.startsWith(PREFIX));const keep=new Set([CACHE,...names.filter(n=>n!==CACHE).slice(-1)]);await Promise.all(names.filter(n=>!keep.has(n)).map(n=>caches.delete(n)));await self.clients.claim();})()));
+self.addEventListener('fetch',event=>{const request=event.request,url=new URL(request.url);if(url.searchParams.has('tala-revision'))return;if(request.method!=='GET'||url.origin!==self.location.origin||!url.pathname.startsWith(BASE)||['sw.js','version.json'].some(n=>url.pathname===BASE+n))return;
+if(request.mode==='navigate'){event.respondWith((async()=>{const active=await caches.open(CACHE);const shell=await active.match(BASE+'index.html');if(shell)return shell;return fetch(request);})());return;}
+const key=url.pathname; if(!FILES.includes(key)&&!key.startsWith(BASE+'assets/'))return;
+event.respondWith((async()=>{const active=await caches.open(CACHE);const cached=await active.match(key)||await caches.match(key);if(cached)return cached;const response=await fetch(request);if(response.ok&&FILES.includes(key)){const cache=await caches.open(CACHE);await cache.put(key,response.clone());}return response;})());});
+`}

@@ -1,0 +1,7 @@
+Arabic Quran text, Uthmani edition, preserved verbatim from Al Quran Cloud / Islamic Network.
+API: https://api.alquran.cloud/v1/quran/quran-uthmani
+Text source: Tanzil Project, https://tanzil.net
+Copyright (C) 2007-2021 Tanzil Project. License: Creative Commons Attribution 3.0.
+Terms and updates: https://tanzil.net/docs/Text_License and https://tanzil.net/updates/
+Only metadata and JSON packaging were changed; verse strings were not edited.
+Source SHA-256: 0df03e1d6da4fc8138208fec1688f2b416f0dd4ebbd514179f3e5e0fbaf4195f

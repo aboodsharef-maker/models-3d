@@ -9,7 +9,7 @@ export function daysUntil(date: string, from = today()) { return Math.round((Dat
 export const formatDate = (date: string, options?: Intl.DateTimeFormatOptions) => { const d=new Date(date+'T12:00:00'); return isNaN(d.getTime())?'تاريخ غير محدد':new Intl.DateTimeFormat('ar-JO', options || { day:'numeric', month:'long' }).format(d); };
 export const sorted = <T extends Entity>(items: T[]) => [...items].sort((a,b)=>a.order-b.order || a.id.localeCompare(b.id));
 export const textOf = (d: Doc | undefined): string => d ? [d.text || '', ...(d.content || []).map(textOf)].join(' ') : '';
-export function initialData(): PlannerData { const stamp=now();return { schemaVersion:1, deviceId:uid(), createdAt:stamp, updatedAt:stamp, revision:0, subjects:['اللغة الإنجليزية','الرياضيات','العلوم','اللغة العربية','التربية الإسلامية','التاريخ'].map((name,i)=>({...entity(i),name,color:colors[i],icon:icons[i]})), sections:[], tasks:[], notes:[], exams:[], settings:{name:'تالا',theme:'royal',accent:'#d8b77b',font:'Tajawal',fontSize:16,animations:true} }; }
+export function initialData(): PlannerData { const stamp=now();return { schemaVersion:2, deviceId:uid(), createdAt:stamp, updatedAt:stamp, revision:0, faith:{prayers:[],plans:[],readings:[],activePlanId:null}, subjects:['اللغة الإنجليزية','الرياضيات','العلوم','اللغة العربية','التربية الإسلامية','التاريخ'].map((name,i)=>({...entity(i),name,color:colors[i],icon:icons[i]})), sections:[], tasks:[], notes:[], exams:[], settings:{name:'تالا',theme:'royal',accent:'#d8b77b',font:'Tajawal',fontSize:16,animations:true} }; }
 export function descendants(sections: Section[], id: string): Set<string> { const found=new Set([id]);let changed=true;while(changed){changed=false;for(const s of sections)if(s.parentId&&found.has(s.parentId)&&!found.has(s.id)){found.add(s.id);changed=true;}}return found; }
 export function tasksIn(data: PlannerData, subjectId: string, sectionId?: string): Task[] { const ids=sectionId?descendants(data.sections,sectionId):null;return data.tasks.filter(t=>t.subjectId===subjectId&&(!ids||!!t.sectionId&&ids.has(t.sectionId))); }
 export function progress(tasks: Task[]) { const done=tasks.filter(t=>t.done).length;return {total:tasks.length,done,percent:tasks.length?Math.round(done/tasks.length*100):0}; }
@@ -18,7 +18,7 @@ export function deleteSection(data: PlannerData, id: string): PlannerData { cons
 export function reorder<T extends Entity>(all:T[], id:string, delta:number, group:(e:T)=>boolean=()=>true):T[] { const list=sorted(all.filter(group)),i=list.findIndex(e=>e.id===id),j=i+delta;if(i<0||j<0||j>=list.length)return all;[list[i],list[j]]=[list[j],list[i]];const positions=new Map(list.map((e,i)=>[e.id,i]));return all.map(e=>positions.has(e.id)?{...e,order:positions.get(e.id)!,updatedAt:now()}:e); }
 export function sectionPath(data: PlannerData, id: string): string { const path:string[]=[],seen=new Set();let s=data.sections.find(s=>s.id===id);while(s&&!seen.has(s.id)){seen.add(s.id);path.unshift(s.name);s=data.sections.find(p=>p.id===s!.parentId);}return path.join(' / '); }
 export function canMoveSection(data: PlannerData, id:string, parentId:string|null) { if(!parentId)return true;const a=data.sections.find(s=>s.id===id),b=data.sections.find(s=>s.id===parentId);return !!a&&!!b&&a.subjectId===b.subjectId&&!descendants(data.sections,id).has(parentId); }
-export function makeBackup(data: PlannerData): Backup { return {app:'TALA Study Planner',schemaVersion:1,exportedAt:now(),data}; }
+export function makeBackup(data: PlannerData): Backup { return {app:'TALA Study Planner',schemaVersion:2,exportedAt:now(),data}; }
 const record=(x:unknown):Record<string,unknown>=>{if(!x||typeof x!=='object'||Array.isArray(x))throw new Error('بنية النسخة الاحتياطية غير صالحة.');return x as Record<string,unknown>;};
 function str(x:unknown,max=300):string { if(typeof x!=='string'||x.length>max)throw new Error('نص أو طول حقل غير صالح.');return x; }
 const nullable=(x:unknown)=>x===null?null:str(x,100);
@@ -43,7 +43,7 @@ export function validateDoc(input:unknown):Doc { let count=0;
  return out;
  }const doc=node(input);if(doc.type!=='doc')throw new Error('جذر الملاحظة غير صالح.');return doc;
 }
-export function validateData(input:unknown):PlannerData { const d=record(input);if(d.schemaVersion!==1)throw new Error('إصدار البيانات غير مدعوم.');
+export function validateData(input:unknown):PlannerData { const d=record(input);if(d.schemaVersion!==1&&d.schemaVersion!==2)throw new Error('إصدار البيانات غير مدعوم.');
 const base=(x:unknown):Entity=>{const r=record(x);return {id:str(r.id,100),createdAt:stamp(r.createdAt),updatedAt:stamp(r.updatedAt),order:num(r.order)};};
 function arr<T>(key:string,limit:number,fn:(r:Record<string,unknown>)=>T):T[]{const a=d[key];if(!Array.isArray(a)||a.length>limit)throw new Error('عدد سجلات غير صالح: '+key);return a.map(x=>fn(record(x)));}
 const subjects=arr('subjects',200,r=>({...base(r),name:str(r.name),color:hex(r.color),icon:choice(r.icon,icons)})) as Subject[];
@@ -57,7 +57,17 @@ const subjectIds=new Set(subjects.map(s=>s.id)),sectionMap=new Map(sections.map(
 for(const s of sections){if(!subjectIds.has(s.subjectId))throw new Error('قسم مرتبط بمادة غير موجودة.');let p:typeof s|undefined=s;const seen=new Set();while(p){if(seen.has(p.id)||seen.size>20)throw new Error('تسلسل أقسام دائري أو عميق جدًا.');seen.add(p.id);if(p.parentId){const parent=sectionMap.get(p.parentId);if(!parent||parent.subjectId!==s.subjectId)throw new Error('القسم الأب غير صالح.');p=parent;}else p=undefined;}}
 for(const t of [...tasks,...notes,...exams])if(t.subjectId&&!subjectIds.has(t.subjectId))throw new Error('ارتباط بمادة غير موجودة.');
 for(const t of tasks)if(t.sectionId&&(!sectionMap.has(t.sectionId)||sectionMap.get(t.sectionId)?.subjectId!==t.subjectId))throw new Error('ارتباط المهمة بالقسم غير صالح.');
-return {schemaVersion:1,deviceId:str(d.deviceId,100),createdAt:stamp(d.createdAt),updatedAt:stamp(d.updatedAt),revision:num(d.revision),subjects,sections,tasks,notes,exams,settings};
+const f=d.faith===undefined?{prayers:[],plans:[],readings:[],activePlanId:null}:record(d.faith);
+function faithArray<T>(key:string,limit:number,fn:(r:Record<string,unknown>)=>T):T[]{const a=f[key];if(!Array.isArray(a)||a.length>limit)throw new Error('عدد سجلات العبادة غير صالح.');return a.map(x=>fn(record(x)));}
+const integer=(x:unknown,min:number,max:number)=>{const n=num(x);if(!Number.isInteger(n)||n<min||n>max)throw new Error('رقم صفحة غير صالح.');return n;};
+const prayerRows=faithArray('prayers',10000,r=>{if(!Array.isArray(r.completed)||r.completed.length>5)throw new Error('سجل صلاة غير صالح.');const completed=r.completed.map(p=>choice(p,['fajr','dhuhr','asr','maghrib','isha'] as const));if(new Set(completed).size!==completed.length)throw new Error('صلاة مكررة.');return {...base(r),date:date(r.date),completed};});
+const plans=faithArray('plans',1000,r=>{const start=date(r.startDate),target=r.targetDate===null?null:date(r.targetDate);if(target&&target<start)throw new Error('نهاية الختمة تسبق بدايتها.');return {...base(r),title:str(r.title),totalPages:integer(r.totalPages,1,2000),startDate:start,targetDate:target};});
+const readings=faithArray('readings',20000,r=>{const from=integer(r.fromPage,1,2000),to=integer(r.toPage,1,2000),planId=str(r.planId,100),p=plans.find(p=>p.id===planId);if(!p||to<from||to>p.totalPages)throw new Error('صفحات الورد لا تطابق الختمة.');return {...base(r),planId,date:date(r.date),fromPage:from,toPage:to,note:str(r.note,1000)};});
+if(new Set(prayerRows.map(p=>p.date)).size!==prayerRows.length)throw new Error('سجل صلاة يومي مكرر.');
+for(const e of [...prayerRows,...plans,...readings]){if(!e.id||ids.has(e.id))throw new Error('معرف عبادة مكرر.');ids.add(e.id);}
+const activePlanId=nullable(f.activePlanId);if(activePlanId&&!plans.some(p=>p.id===activePlanId))throw new Error('ختمة نشطة غير موجودة.');
+const faith={prayers:prayerRows,plans,readings,activePlanId};
+return {schemaVersion:2,deviceId:str(d.deviceId,100),createdAt:stamp(d.createdAt),updatedAt:stamp(d.updatedAt),revision:num(d.revision),subjects,sections,tasks,notes,exams,settings,faith};
 }
-export function parseBackup(text:string):PlannerData { if(text.length>15_000_000)throw new Error('النسخة أكبر من 15 ميغابايت.');const b=record(JSON.parse(text));if(b.app!=='TALA Study Planner'||b.schemaVersion!==1)throw new Error('اختاري نسخة JSON مصدّرة من TALA Study Planner.');return validateData(b.data); }
+export function parseBackup(text:string):PlannerData { if(text.length>15_000_000)throw new Error('النسخة أكبر من 15 ميغابايت.');const b=record(JSON.parse(text));if(b.app!=='TALA Study Planner'||(b.schemaVersion!==1&&b.schemaVersion!==2))throw new Error('اختاري نسخة JSON مصدّرة من TALA Study Planner.');return validateData(b.data); }
 export { emptyDoc };

@@ -1,1 +1,52 @@
-{"id":"/models-3d/","name":"TALA Study Planner","short_name":"TALA","lang":"ar","dir":"rtl","start_url":"/models-3d/","scope":"/models-3d/","display":"standalone","background_color":"#160c25","theme_color":"#211032","description":"دفتر تالا للدراسة والمهام والملاحظات","icons":[{"src":"assets/tala-logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{
+  "id": "/models-3d/",
+  "name": "TALA Study Planner",
+  "short_name": "TALA",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/models-3d/",
+  "scope": "/models-3d/",
+  "display": "standalone",
+  "background_color": "#160c25",
+  "theme_color": "#211032",
+  "description": "دفتر الدراسة والصلاة والقرآن، ببيانات محفوظة على جهازك",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "display_override": [
+    "standalone"
+  ],
+  "orientation": "any",
+  "categories": [
+    "education",
+    "productivity",
+    "lifestyle"
+  ],
+  "shortcuts": [
+    {
+      "name": "الصلاة والقرآن",
+      "url": "/models-3d/#faith"
+    },
+    {
+      "name": "مهام اليوم",
+      "url": "/models-3d/#schedule"
+    }
+  ]
+}
