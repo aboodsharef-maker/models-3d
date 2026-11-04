@@ -1,0 +1,22 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "tala-study-sync-staging",
+  "main": "worker.ts",
+  "compatibility_date": "2026-11-04",
+  "workers_dev": true,
+  "vars": {
+    "ALLOWED_ORIGIN": "http://127.0.0.1:5183,http://127.0.0.1:5184",
+    "READ_ONLY": "false"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tala-study-sync-staging",
+      "database_id": "95f2add7-ec70-41e9-a1d0-1890029e6014",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "observability": {
+    "enabled": false
+  }
+}

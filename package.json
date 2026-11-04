@@ -1,14 +1,15 @@
 {
   "name": "tala-study-planner",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build && node tools/build-sw.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
-    "icons": "node tools/generate-icons.mjs"
+    "icons": "node tools/generate-icons.mjs",
+    "check:worker": "tsc -p backend/tsconfig.json"
   },
   "dependencies": {
     "@fontsource/amiri": "^5.3.0",
@@ -27,13 +28,17 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261104.1",
     "@resvg/resvg-js": "^2.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "esbuild": "^0.28.2",
     "fake-indexeddb": "^6.2.7",
+    "miniflare": "^5.20261103.0-beta",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.157.0"
   }
 }

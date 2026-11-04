@@ -15,3 +15,6 @@ dist/
 /vendor/
 /models.js
 /materials-cage.js
+
+# Worker local databases and preview runtime state
+.wrangler/

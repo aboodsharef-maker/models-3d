@@ -1,6 +1,6 @@
 import { describe,it,expect } from 'vitest';
 import { initialData,entity,emptyDoc,makeBackup,parseBackup,validateData } from './data';
-import { emptyFaith,togglePrayer,readingProgress,dailyGoal,deletePlan } from './faith';
+import { emptyFaith,togglePrayer,readingProgress,dailyGoal,deletePlan,faithAchievements } from './faith';
 import type { Khatma,Reading } from './types';
 const plan:Khatma={...entity(),title:'ختمتي',totalPages:604,startDate:'2026-11-01',targetDate:'2026-11-30'};
 const reading=(fromPage:number,toPage:number,date='2026-11-01'):Reading=>({...entity(),planId:plan.id,date,fromPage,toPage,note:''});
@@ -15,4 +15,9 @@ describe('safe additive migration and backup',()=>{
 it('upgrades an original v1 notebook without losing its notes or subject ids',()=>{const original=initialData();original.notes=[{...entity(),subjectId:original.subjects[0].id,title:'ملاحظتي الأصلية',body:emptyDoc,pinned:false}];const old=JSON.parse(JSON.stringify(original));old.schemaVersion=1;delete old.faith;const migrated=parseBackup(JSON.stringify({app:'TALA Study Planner',schemaVersion:1,data:old}));expect(migrated.schemaVersion).toBe(2);expect(migrated.notes).toEqual(original.notes);expect(migrated.subjects).toEqual(original.subjects);expect(migrated.faith).toEqual(emptyFaith());});
 it('round trips prayers and reading with study data',()=>{const d=initialData();d.faith={...togglePrayer(emptyFaith(),'2026-11-01','fajr'),plans:[plan],readings:[reading(1,21)],activePlanId:plan.id};expect(parseBackup(JSON.stringify(makeBackup(d)))).toEqual(d);});
 it('rejects out of range pages, unknown prayer keys and orphaned reading',()=>{const d=initialData();d.faith={...emptyFaith(),plans:[plan],readings:[reading(10,605)],activePlanId:plan.id};expect(()=>validateData(d)).toThrow();d.faith.readings=[{...reading(1,5),planId:'missing'}];expect(()=>validateData(d)).toThrow();d.faith.readings=[];const raw=JSON.parse(JSON.stringify(d));raw.faith.prayers=[{...entity(),date:'2026-11-01',completed:['invalid']}];expect(()=>validateData(raw)).toThrow();});
+});
+
+describe('faith achievements from real logs',()=>{
+ it('awards a khatma only when every page is covered, and counts duplicate reading once',()=>{const f={...emptyFaith(),plans:[plan],readings:[reading(1,603),reading(1,603)],activePlanId:plan.id};expect(faithAchievements(f,'2026-11-04').completedPlans).toBe(0);expect(faithAchievements(f,'2026-11-04').plans[0].percent).toBe(99);f.readings.push(reading(604,604));expect(faithAchievements(f,'2026-11-04').completedPlans).toBe(1);expect(faithAchievements(f,'2026-11-04').totalPages).toBe(604);});
+ it('counts full prayer days and streaks without including future logs',()=>{let f=emptyFaith();for(const date of ['2026-11-02','2026-11-03','2026-11-05'])for(const prayer of ['fajr','dhuhr','asr','maghrib','isha'] as const)f=togglePrayer(f,date,prayer);f=togglePrayer(f,'2026-11-04','fajr');const s=faithAchievements(f,'2026-11-04');expect(s.fullDays).toBe(2);expect(s.prayerStreak).toBe(2);expect(s.totalPrayers).toBe(11);expect(s.todayPrayers).toBe(1);f=togglePrayer(f,'2026-11-03','isha');expect(faithAchievements(f,'2026-11-04').prayerStreak).toBe(0);});
 });
